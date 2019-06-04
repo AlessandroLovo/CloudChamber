@@ -20,12 +20,12 @@ def Denoising1(inputpath, inputfile, outputpath, outputfile, denoising1, verbose
 
 #dilation:
 def Dilation(inputpath, inputfile, outputpath, outputfile, dilation, verbose=False):
-	if verbose:
-                print('Dilation \n')
-	image_in = cv2.imread(str(inputpath)+inputfile)
-	kernel = np.ones((dilation,dilation),np.uint8)
-	image_out = cv2.dilate(image_in,kernel,iterations = 1)
-	cv2.imwrite(str(outputpath)+outputfile, image_out)
+    if verbose:
+        print('Dilation \n')
+    image_in = cv2.imread(str(inputpath)+inputfile)
+    kernel = np.ones((dilation,dilation),np.uint8)
+    image_out = cv2.dilate(image_in,kernel,iterations = 1)
+    cv2.imwrite(str(outputpath)+outputfile, image_out)
 
 #subtract background:
 def BackgroundSubtraction(inputpath, inputfile, inputbkg, outputpath, outputfile, verbose=False):
@@ -79,7 +79,7 @@ def Labeling(inputpath, inputfile, outputpath, outputfile, gauss_radius, cc_thr,
     file,dot,extension = inputfile.partition('.')
     image_in = scipy.misc.imread(str(inputpath)+inputfile, flatten=True) # gray-scale image
     image_out = ndimage.gaussian_filter(image_in, gauss_radius)
-    
+
     s = ndimage.generate_binary_structure(2,2)
     labeled, nr_objects = ndimage.label(image_out, structure=s)
     labels = np.unique(labeled)
@@ -88,7 +88,7 @@ def Labeling(inputpath, inputfile, outputpath, outputfile, gauss_radius, cc_thr,
         print("Number of objects is %d " % nr_objects)
     cv2.imwrite(str(outputpath)+outputfile, labeled)
 
-	#projecting on the trace:
+    #projecting on the trace:
     total_number_cc=0
     for i in range(nr_objects):
         i+=1
