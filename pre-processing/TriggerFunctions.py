@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
 import os
+'''
 import math
 import cv2
 from keras.models import Sequential
@@ -10,6 +11,7 @@ import scipy
 from scipy import ndimage
 from tqdm import tqdm
 import Filters
+'''
 
 def TotalFrames(folder, run, verbose=False):
 	n=0

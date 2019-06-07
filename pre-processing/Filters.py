@@ -1,11 +1,11 @@
 import numpy as np
 from PIL import Image
-import os
-import math
+#import os
+#import math
 import cv2
 from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D
-from matplotlib import pyplot as plt
+from keras.layers import MaxPooling2D #,Conv2D
+#from matplotlib import pyplot as plt
 import scipy
 from scipy import ndimage
 
@@ -100,7 +100,7 @@ def Labeling(inputpath, inputfile, outputpath, outputfile, gauss_radius, cc_thr,
         if verbose:
             print('Dimension of the connencted component '+str(i)+': '+str(sum(sum(projector))))
         matrix=projector*image_in #image_out to have gray-scale
-        cv2.imwrite(str(outputpath)+file+'_cc'+str(i)+'.png', matrix)
-        if verbose:
-            print('Total number of selected connected components: '+str(total_number_cc))
+        cv2.imwrite(str(outputpath)+file+('_cc%02d.png' % i), matrix)
+    if verbose:
+        print('Total number of selected connected components: '+str(total_number_cc))
     return total_number_cc
