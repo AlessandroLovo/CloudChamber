@@ -5,17 +5,19 @@ Created on Tue Apr  2 23:34:37 2019
 @author: ale57
 """
 
-from Trace import Trace as Trace
+from Trace import Trace
+
 from shutil import copyfile
 import os
 
   
 class Trasher():
     
-    def __init__(self, raw_path,junk_path,interesting_path):
+    def __init__(self, raw_path,junk_path,interesting_path,copy_junk = True):
         self.raw_path = raw_path
         self.junk_path = junk_path
         self.interesting_path = interesting_path
+        self.copy_junk = copy_junk
         self.junk_count = 0
         self.interesting_count = 0
         
@@ -27,12 +29,12 @@ class Trasher():
         if good:
             copyfile(self.raw_path + filename,self.interesting_path + filename)
             print(filename, ' is interesting')
-        else:
+        elif self.copy_junk:
             copyfile(self.raw_path + filename,self.junk_path + filename)
             print(filename, ' is junk')
     
     def is_good(self, filename):
-        t = Trace(self.raw_path + filename)
+        t = Trace(self.raw_path,filename)
         
         if t.white_perc > self.white_perc_thr:
             print('too crowded: ',t.white_perc)

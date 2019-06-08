@@ -27,6 +27,14 @@ def Dilation(inputpath, inputfile, outputpath, outputfile, dilation, verbose=Fal
     image_out = cv2.dilate(image_in,kernel,iterations = 1)
     cv2.imwrite(str(outputpath)+outputfile, image_out)
 
+def Opening(inputpath, inputfile, outputpath, outputfile, opening, verbose=False):
+    if verbose:
+        print('Opening \n')
+    image_in = cv2.imread(str(inputpath)+inputfile)
+    kernel = np.ones((opening,opening),np.uint8)
+    image_out = cv2.morphologyEx(image_in,cv2.MORPH_OPEN,kernel)
+    cv2.imwrite(str(outputpath)+outputfile, image_out)
+
 #subtract background:
 def BackgroundSubtraction(inputpath, inputfile, inputbkg, outputpath, outputfile, verbose=False):
     if verbose:

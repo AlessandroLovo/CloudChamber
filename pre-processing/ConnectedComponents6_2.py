@@ -44,6 +44,10 @@ local_path = '/media/alessandro/DATA/tesi/Nebbia/pre-processed_data/'
 def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discriminant_thr=0.004, denoising1_bkg = 5, dilation_bkg = 6,
                         denoising1 = 10, denoising2= 0.81, denoising2_sub= 0.0078, max_pool = 2, gauss_radius= 2.0, cc_thr= 3000):
     
+    '''
+    Tryed to optimize time of execution by considering all operation linear: it failed miserably
+    '''
+    
     run=data+'-'+video+'-'
     
     output_path=nebbia_path+str(data)+'/'+str(video)+'/trigger_thr'+str(discriminant_thr)+'/'

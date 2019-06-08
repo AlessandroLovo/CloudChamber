@@ -16,6 +16,7 @@ from tqdm import tqdm
 '''
 denoising1_bkg = 5
 dilation_bkg = 6
+pre_labeling_opening = 6
 denoising1 = 10
 denoising2= 0.81
 denoising2_sub= 0.0078
@@ -29,17 +30,20 @@ nebbia_path = '/home/gaiag/'
 local_path = '/media/alessandro/DATA/tesi/Nebbia/pre-processed_data/'
 
 def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discriminant_thr=0.004, denoising1_bkg = 5, dilation_bkg = 6,
-                        denoising1 = 10, denoising2= 0.81, denoising2_sub= 0.0078, max_pool = 2, gauss_radius= 2.0, cc_thr= 3000, verbose=True):
+                        pre_labeling_opening = 3, denoising1 = 10, denoising2= 0.81, denoising2_sub= 0.0078, max_pool = 2,
+                        gauss_radius= 2.0, cc_thr= 3000, verbose=True):
     
     '''
-    Optimized execution time without affecting the result, added possibility to save only the cc (is_slim)
+    Added cv2.opening just before labeling
     '''
     
     run=data+'-'+video+'-'
     
-    output_path=nebbia_path+str(data)+'/'+str(video)+'/trigger_thr'+str(discriminant_thr)+'/'
+    output_path=nebbia_path
     if outpath == 'local_path':
-        output_path=local_path+str(data)+'/'+str(video)+'/trigger_thr'+str(discriminant_thr)+'/'
+        output_path=local_path
+    output_path += str(data)+'/'+str(video)+'/trigger_thr'+str(discriminant_thr)+'_opening'+str(pre_labeling_opening)+'/'
+    
     input_folder = path#+'frames/'
     output_folder_mean = output_path+'means_filtered_2den'+str(denoising2)+'_gausrad'+str(gauss_radius)+'/'
     output_folder_cc = output_path+'cc_filtered_2den'+str(denoising2)+'_gausrad'+str(gauss_radius)+'/'
@@ -132,7 +136,8 @@ def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discri
         #selecting via discriminant value
         if not TriggerFunctions.ImageSelectingByDiscrimination(matrix_raw/255., matrix_mean, matrix_var, discriminant_thr, verbose = True):
             continue
-        print(raw_file_name4)
+        if not verbose:
+            print(raw_file_name4)
             
         signals+=1
         log_text=open(log_path, "a")
@@ -189,7 +194,11 @@ def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discri
     
         Filters.Denoising2(output_folder_mean, 'mean_'+str(raw_file_name2)+'.png', output_folder_mean,
                            'mean_'+str(raw_file_name2)+'_den2.png', denoising2)
-        number_cc = Filters.Labeling(output_folder_mean, 'mean_'+str(raw_file_name2)+'_den2.png', output_folder_cc,
+        
+        Filters.Opening(output_folder_mean,'mean_'+str(raw_file_name2)+'_den2.png', output_folder_mean,
+                        'mean_'+str(raw_file_name2)+'_opened.png', pre_labeling_opening)
+        
+        number_cc = Filters.Labeling(output_folder_mean, 'mean_'+str(raw_file_name2)+'_opened.png', output_folder_cc,
                                      'labeled_'+str(raw_file_name2)+'.png', gauss_radius, cc_thr, verbose=verbose)
             
         total_number_cc = total_number_cc + number_cc
@@ -225,7 +234,7 @@ def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discri
 
 
 if __name__ == '__main__':
-    path = sys.argv[1]  #e.g. ../../raw_data/280519/frames/
+    path = sys.argv[1]  #e.g. ../../raw_data/280519/video7/frames/
     data=sys.argv[2]    #e.g. 280519
     video=sys.argv[3]   #e.g. video7_000
     
