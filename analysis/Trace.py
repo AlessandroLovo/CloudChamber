@@ -21,6 +21,8 @@ class Trace():
         
         # estimators
         self.lenght = -1.0
+        self.extra_lenght = 0.
+        self.linear_lenght = 0.
         self.thickness = -1.0
         self.density = -1.0
         self.curvature = -1.0
@@ -42,6 +44,7 @@ class Trace():
         self.perimeter_points = []
         self.components = []
         self.components_centroids = []
+        self.components_extremals = []
         
         xdim,ydim = self.matrix.shape
         
@@ -83,7 +86,8 @@ class Trace():
         plt.figure()
         plt.scatter(self.trace[:,0],self.trace[:,1],marker='+')
         plt.scatter(self.perimeter_points[:,0],self.perimeter_points[:,1],marker='^',color='red')
-        plt.scatter(self.components_centroids[:,0],self.components_centroids[:,1],marker='o',color='green',s=1000)
+        plt.scatter(self.components_centroids[:,0],self.components_centroids[:,1],marker='o',color='green',s=500)
+        plt.scatter(self.components_extremals[:,:,0].flatten(),self.components_extremals[:,:,1].flatten(),marker='o',color='orange',s=500)
         #plt.contour(self.density_matrix.T,levels=[0.25,0.5,0.75,1])
         #plt.plot(points[:,0],points[:,1])
         plt.show()
@@ -128,7 +132,7 @@ class Trace():
         
     
         
-    def compute_estimators(self, radius=4, thr=0.5, tolerance=6, max_components_distance=8, high_thr = 0.8):
+    def compute_estimators(self, radius=4, thr=0.5, tolerance=6, max_components_distance=8, high_thr = 0.5):
         
         r = int(radius)
         perimeter = 0
@@ -185,7 +189,77 @@ class Trace():
                     break
             if not found:
                 self.components.append([[p[0],p[1]]])
+                
+        # check components again
+        if len(self.components) > 1:
+            n_components = len(self.components) + 1
+            while len(self.components) < n_components:
+                n_components = len(self.components)
+                print('Checking components')
+                for i,c in enumerate(self.components):
+                    for i1,c1 in enumerate(self.components):
+                        found = False
+                        if i >= i1:
+                            continue
+                        for p in c:
+                            for p1 in c1:
+                                if (p1[0] - p[0])**2 + (p1[1] - p[1])**2 < max_components_distance**2:
+                                    print(i1,n_components)
+                                    self.components.remove(self.components[i1])
+                                    self.components[i] += c1
+                                    found = True
+                                    break
+                            if found:
+                                break
+                        if found:
+                            break
+                    if found:
+                        break
+                    
+                    
+        # compute missing distance pieces
+        self.components_extremals = []
+        for c in self.components:
+            i_best = 0
+            j_best = 0
+            d = 0
+            for i,p in enumerate(c):
+                for j,p1 in enumerate(c):
+                    if i <= j:
+                        break
+                    if (p1[0] - p[0])**2 + (p1[1] - p[1])**2 > d:
+                        i_best = i
+                        j_best = j
+                        d = (p1[0] - p[0])**2 + (p1[1] - p[1])**2
+            
+            self.components_extremals.append([c[i_best],c[j_best]])
         
+        self.components_extremals = np.array(self.components_extremals)
+
+        self.extra_lenght = 0.
+        if len(self.components_centroids) > 1:
+            d1 = 0
+            for i,c in enumerate(self.components_extremals):
+                d = 10**9 # just a big number
+                if i == len(self.components_extremals) - 1:
+                    break
+                for i1,c1 in enumerate(self.components_extremals):
+                    if i >= i1:
+                        continue
+                    for p in c:
+                        for p1 in c1:
+                            if (p1[0] - p[0])**2 + (p1[1] - p[1])**2 < d:
+                                d = (p1[0] - p[0])**2 + (p1[1] - p[1])**2
+                            if (p1[0] - p[0])**2 + (p1[1] - p[1])**2 > d1:
+                                d1 = (p1[0] - p[0])**2 + (p1[1] - p[1])**2
+                print(d)
+                self.extra_lenght += np.sqrt(d)
+                
+            self.linear_lenght = np.sqrt(d1)
+        
+        else:
+            c = self.components_extremals[0]
+            self.linear_lenght = np.sqrt((c[0][0] - c[1][0])**2 + (c[0][1] - c[1][1])**2)
         
         for i,c in enumerate(self.components):
             self.components[i] = np.array(c)
@@ -198,9 +272,11 @@ class Trace():
                 
         
         self.lenght, self.thickness = lt(perimeter,area,len(self.components_centroids))
+        self.lenght += self.extra_lenght
         
+        self.curvature = self.lenght/self.linear_lenght
                 
-        return perimeter, area, len(self.components_centroids), self.lenght, self.thickness
+        return perimeter, area, len(self.components_centroids), self.lenght, self.thickness, self.extra_lenght, self.curvature
                 
                             
                             
