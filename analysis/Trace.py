@@ -9,6 +9,7 @@ import numpy as np
 from PIL import Image 
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import time
 
 def lt(p,A,n):
     t = (p/4.0 - np.sqrt((p/4.0)**2 - n*A))/n
@@ -21,11 +22,10 @@ class Trace():
         
         # estimators
         self.lenght = -1.0
-        self.extra_lenght = 0.
-        self.linear_lenght = 0.
         self.thickness = -1.0
         self.density = -1.0
         self.curvature = -1.0
+        self.n_components = 0
         
         # e.g filename = mean_280519-video7_000-007_opened_cc02.png
         prefix, dot, name = str(filename).partition('-') # = mean_280519, -, video7_000-007_opened_cc02.png
@@ -45,12 +45,21 @@ class Trace():
         self.components = []
         self.components_centroids = []
         self.components_extremals = []
+        self.components_joints = []
+        
+        self.extra_lenght = 0.
+        self.linear_lenght = 0.
         
         xdim,ydim = self.matrix.shape
         
         trace = []
         pixel_count = 0
         first_time = True
+        
+        self.min_i = xdim
+        self.max_i = 0
+        self.min_j = ydim
+        self.max_j = 0
         
         for i,x in enumerate(self.matrix):
             for j,y in enumerate(x):
@@ -60,13 +69,23 @@ class Trace():
                         first_time = False
                     if first_y != y:
                         print(filename,': non saturated frame', i,j,y)
+                    if i > self.max_i:
+                        self.max_i = i
+                    if i < self.min_i:
+                        self.min_i = i
+                    if j > self.max_j:
+                        self.max_j = j
+                    if j < self.min_j:
+                        self.min_j = j
                     trace += [[i,j]]
                     pixel_count += 1
+        
+        print((self.min_i,self.max_i,self.min_j,self.max_j))
         
         self.trace = np.array(trace)
         self.white_number = pixel_count
         self.white_perc = pixel_count*100/xdim/ydim
-        self.max_linear_lenght = np.sqrt((np.max(self.trace[:,0] - np.min(self.trace[:,0])))**2 + (np.max(self.trace[:,1] - np.min(self.trace[:,1])))**2)
+        self.max_linear_lenght = np.sqrt((self.max_i - self.min_i)**2 + (self.max_j - self.min_j)**2)
         self.centroid = [0,0]
         self.xy_variance = [0,0]
         self.direction_from_variance = 0
@@ -77,19 +96,16 @@ class Trace():
         self.eccentricity_from_inertia = 0
         
     def scatter_trace(self):
-        self.compute_variance()
-        points = [[self.trace[0,0],self.trace[0,1]]]
-        points.append([self.trace[0,0] + self.max_linear_lenght*self.direction_from_variance[0],
-                       self.trace[0,1] + self.max_linear_lenght*self.direction_from_variance[1]])
-        points = np.array(points)
         #print(points)
         plt.figure()
+        plt.title(self.filename)
         plt.scatter(self.trace[:,0],self.trace[:,1],marker='+')
         plt.scatter(self.perimeter_points[:,0],self.perimeter_points[:,1],marker='^',color='red')
         plt.scatter(self.components_centroids[:,0],self.components_centroids[:,1],marker='o',color='green',s=500)
         plt.scatter(self.components_extremals[:,:,0].flatten(),self.components_extremals[:,:,1].flatten(),marker='o',color='orange',s=500)
+        for c in self.components_joints:
+            plt.plot(c[1][:,0],c[1][:,1],color='orange',linewidth = 5)
         #plt.contour(self.density_matrix.T,levels=[0.25,0.5,0.75,1])
-        #plt.plot(points[:,0],points[:,1])
         plt.show()
         
     def compute_basics(self):
@@ -134,13 +150,22 @@ class Trace():
         
     def compute_estimators(self, radius=4, thr=0.5, tolerance=6, max_components_distance=8, high_thr = 0.5):
         
+        start_time = time.time()
+        
         r = int(radius)
         perimeter = 0
         self.perimeter_points = []
         components_points = []
         area = 0
-        for i,x in tqdm(enumerate(self.matrix)):
-            for j,y in enumerate(x):
+        i_min = max(0,self.min_i - r)
+        i_max = min(self.max_i + r + 1,self.matrix.shape[0])
+        j_min = max(0,self.min_j - r)
+        j_max = min(self.max_j + r + 1,self.matrix.shape[1])
+        
+        # compute density matrix, perimeter and area
+        print((i_min,i_max,j_min,j_max))
+        for i in range(i_min,i_max):
+            for j in range(j_min,j_max):
                 q = 0
                 count = 0
                 #square kernel
@@ -175,6 +200,7 @@ class Trace():
         self.components = []
         self.components_centroids = []
         
+        # subdividing points in components
         for p in components_points:
             found = False
             for i,t in enumerate(self.components):
@@ -215,9 +241,10 @@ class Trace():
                             break
                     if found:
                         break
-                    
-                    
-        # compute missing distance pieces
+        
+        self.n_components = len(self.components)
+        
+        # find components extremals
         self.components_extremals = []
         for c in self.components:
             i_best = 0
@@ -235,25 +262,38 @@ class Trace():
             self.components_extremals.append([c[i_best],c[j_best]])
         
         self.components_extremals = np.array(self.components_extremals)
-
+        
+        
+        # find components joints
+        dtype = [('distance',float),('joints',np.ndarray)]
+        values = []
+        self.components_joints = []
         self.extra_lenght = 0.
-        if len(self.components_centroids) > 1:
+        if self.n_components > 1:
             d1 = 0
             for i,c in enumerate(self.components_extremals):
-                d = 10**9 # just a big number
                 if i == len(self.components_extremals) - 1:
                     break
                 for i1,c1 in enumerate(self.components_extremals):
+                    d = 10**9 # just a big number
                     if i >= i1:
                         continue
                     for p in c:
                         for p1 in c1:
                             if (p1[0] - p[0])**2 + (p1[1] - p[1])**2 < d:
                                 d = (p1[0] - p[0])**2 + (p1[1] - p[1])**2
+                                best_p = p
+                                best_p1 = p1
                             if (p1[0] - p[0])**2 + (p1[1] - p[1])**2 > d1:
                                 d1 = (p1[0] - p[0])**2 + (p1[1] - p[1])**2
-                print(d)
-                self.extra_lenght += np.sqrt(d)
+                    print(d)
+                    values.append((np.sqrt(d),np.array([[best_p[0],best_p[1]],[best_p1[0],best_p1[1]]])))
+            
+            v = np.array(values,dtype=dtype)
+            v = np.sort(v,order='distance')
+            self.components_joints = v[:self.n_components-1] # = array([(12.3, list([124,233],[235,416])), ...])
+            for c in self.components_joints:
+                self.extra_lenght += c[0]                    
                 
             self.linear_lenght = np.sqrt(d1)
         
@@ -275,8 +315,11 @@ class Trace():
         self.lenght += self.extra_lenght
         
         self.curvature = self.lenght/self.linear_lenght
+        
+        end_time = time.time()
+        delta_t = end_time - start_time
                 
-        return perimeter, area, len(self.components_centroids), self.lenght, self.thickness, self.extra_lenght, self.curvature
+        return delta_t, perimeter, area, self.n_components, self.lenght, self.thickness, self.extra_lenght, self.curvature
                 
                             
                             
