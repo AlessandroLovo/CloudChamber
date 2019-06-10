@@ -17,8 +17,7 @@ def TotalFrames(folder, run, verbose=False):
 	n=0
 	for file in os.listdir(folder):
 		if (file.startswith(run)):
-			if (file.endswith('-001.png')):# or file.endswith('-2.png') or
-			 #file.endswith('-3.png') or file.endswith('-4.png')):
+			if (file.endswith('0-001.png') or file.endswith('0-002.png') or file.endswith('0-003.png')):
 				continue
 			n+=1
 	print('Total number of images processed: '+str(n))
@@ -32,8 +31,7 @@ def TotalMeanVar(folder_in, matrix_prototype, run, n):
 	
 	for file in os.listdir(folder_in):
 		if (file.startswith(run)):
-			if (file.endswith('-001.png')):# or file.endswith('-2.png')or
-			#file.endswith('-3.png') or file.endswith('-4.png')):
+			if (file.endswith('0-001.png') or file.endswith('0-002.png') or file.endswith('0-003.png')):
 				continue
 			image = Image.open(str(folder_in)+file)
 			matrix = np.asarray(image.convert('L'), dtype=np.int16)*1.

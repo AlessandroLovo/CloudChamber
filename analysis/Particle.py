@@ -15,7 +15,8 @@ import numpy as np
 
 class Particle:
     
-    def __init__(self, ID, traces):
+    def __init__(self, path, ID, traces):
+        self.path = path
         self.ID = ID
         self.traces = traces
         self.lenght = 0
@@ -24,6 +25,8 @@ class Particle:
         self.curvature = 0
         self.persistence = 1
         self.traces_names = []
+        
+        self.slim_particle = []
         self.isready = False
         
     def Average(self):
@@ -48,19 +51,21 @@ class Particle:
         self.n_components = n_components*1./len(self.traces)
         self.curvature = curvature*1./len(self.traces)
         
+        self.slim_particle = [self.path,self.ID,self.persistence,self.lenght,self.thickness,self.n_components,self.curvature,self.traces_names]
+        
         self.isready = True
         
     def values(self):
         if not self.isready:
             self.Average()
-        return [self.lenght,self.thickness,self.n_components,self.curvature,self.persistence,self.traces_names]
+        return self.slim_particle
         
         
 
         
-def Join_Particles(folder,overlap_thr=0.5,autotrigger=True,eccentricity_thr=10,verbose=True):
-    ID = 1
-    particles = []
+def Join_Particles(particles=[],start_ID=1,folder='./',overlap_thr=0.5,autotrigger=True,eccentricity_thr=10,verbose=True):    
+    
+    ID = start_ID
     
     for filename in tqdm(os.listdir(folder)):
         
@@ -99,9 +104,42 @@ def Join_Particles(folder,overlap_thr=0.5,autotrigger=True,eccentricity_thr=10,v
                     break
         
         if not found:
-            particles.append(Particle(ID,[t]))
+            particles.append(Particle(folder,ID,[t]))
             ID += 1
             
+    return particles, ID - start_ID
+
+def Big_iteration(particles=[],path='./',subdirectory='trigger_thr0.005_cl9_op3/cc_filtered_2den0.81_gausrad2.0/',
+                  slim=False,overlap_thr=0.5,autotrigger=True,eccentricity_thr=10,verbose=True):
+    
+    if len(particles) == 0:
+        ID = 1
+    else:
+        ID = particles[0].ID + 1
+    
+    for folder in os.listdir(path):
+        subfolder = folder+'./'+subdirectory
+        if not os.path.exists(path+subfolder):
+            if verbose:
+                print(subfolder+' not found')
+            continue
+        if verbose:
+            print('found '+subfolder)
+        
+        p, n = Join_Particles(particles=[],start_ID=ID,folder=path+subfolder,overlap_thr=overlap_thr,
+                              autotrigger=autotrigger,eccentricity_thr=eccentricity_thr,verbose=verbose)
+        
+        if slim:
+            # save only the slim_particle
+            q = [h.values() for h in p]
+            particles += q
+        else:
+            # save th whole particle
+            particles += p
+        
+        ID += n
+    
     return particles, ID - 1
+        
             
         

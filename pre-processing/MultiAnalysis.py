@@ -10,7 +10,7 @@ import os
 import sys
 import time
 
-from ConnectedComponents6_3 import ConnectedComponents
+from ConnectedComponents6_5 import ConnectedComponents
 
 path = sys.argv[1]  # = ../../raw_data/280519/frames/
 data=sys.argv[2]    # = 280519

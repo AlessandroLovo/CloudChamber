@@ -29,9 +29,9 @@ discriminant_thr=0.004
 nebbia_path = '/home/gaiag/'
 local_path = '/media/alessandro/DATA/tesi/Nebbia/pre-processed_data/'
 
-def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discriminant_thr=0.004, denoising1_bkg = 5, dilation_bkg = 6,
+def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discriminant_thr=0.005, denoising1_bkg = 5, dilation_bkg = 6,
                         pre_labeling_opening = 3, pre_labeling_closing = 9, denoising1 = 10, denoising2= 0.81, denoising2_sub= 0.0078, max_pool = 2,
-                        gauss_radius= 2.0, cc_thr= 3000, verbose=True):
+                        gauss_radius= 2.0, cc_thr= 3000, bkg_step = 2, verbose=True):
     
     '''
     Added cv2.closing before opening
@@ -104,14 +104,14 @@ def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discri
     
     for file in tqdm(os.listdir(input_folder)):
         if (file.startswith(raw_video)):
-            if file.endswith('-001.png'):
+            if (file.endswith('0-001.png') or file.endswith('0-002.png') or file.endswith('0-003.png')):
                 continue
             file_name, dot, extension = file.partition('.')
             file_name1, dot, file_name2 = file_name.partition('-')
             file_name3, dot, file_name4 = file_name2.partition('-')
             file_name5, dot, file_name6 = file_name4.partition('-')
             number=int(file_name6)
-            if(number%2):
+            if(number%bkg_step):
                 continue
             
             #background manipulation
@@ -123,7 +123,7 @@ def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discri
     for file_raw in tqdm(os.listdir(input_folder)):
         if not file_raw.endswith('.png'):
             continue
-        if file_raw.endswith('-001.png'):
+        if (file_raw.endswith('0-001.png') or file_raw.endswith('0-002.png') or file_raw.endswith('0-003.png')):
             continue
         raw_image = Image.open(str(input_folder)+file_raw)
         matrix_raw=np.asarray(raw_image.convert('L'))
@@ -157,7 +157,7 @@ def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discri
         
         n_backgrounds=n_total_bkg
         number=int(raw_file_name6)
-        if not number%2:
+        if not number%bkg_step:
             n_backgrounds = n_total_bkg - 1
         
         log_text=open(log_path, "a")
@@ -168,7 +168,7 @@ def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discri
     	
         for file in os.listdir(input_folder):
             if (file.startswith(raw_video)):
-                if (file.endswith('-001.png') or file == file_raw):
+                if (file.endswith('0-001.png') or file.endswith('0-002.png') or file.endswith('0-003.png') or file == file_raw):
                     continue
                 file_name, dot, extension = file.partition('.')
                 file_name1, dot, file_name2 = file_name.partition('-')
