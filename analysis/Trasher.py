@@ -71,3 +71,19 @@ class Trasher():
             if not filename.endswith('.png'):
                 continue
             os.remove(self.interesting_path + filename)
+            
+def Trigger(t,white_perc_thr=3,eccentricity_thr=30,verbose=False):
+    if t.white_perc > white_perc_thr:
+        if verbose:
+            print('\n'+t.filename+': too crowded: '+str(t.white_perc))
+        return False
+    t.compute_inertia()
+    if t.eccentricity_from_inertia < eccentricity_thr:
+        if verbose:
+            print('\n'+t.filename+': too spherical '+str(t.eccentricity_from_inertia))
+        return False
+    
+    if verbose:
+        print('\n'+t.filename+' is INTERESTING')
+    return True
+    

@@ -8,8 +8,16 @@ Created on Tue Apr  2 23:46:57 2019
 import numpy as np
 from PIL import Image 
 import matplotlib.pyplot as plt
-from tqdm import tqdm
+#from tqdm import tqdm
 import time
+import os
+
+def try_traces(folder):
+    for file in os.listdir(folder):
+        if file.startswith('mean'):    
+            a = Trace(folder,file)
+            a.compute_estimators(verbose=True)
+            a.scatter_trace()
 
 def lt(p,A,n):
     t = (p/4.0 - np.sqrt((p/4.0)**2 - n*A))/n
@@ -23,9 +31,8 @@ class Trace():
         # estimators
         self.lenght = -1.0
         self.thickness = -1.0
-        self.density = -1.0
-        self.curvature = -1.0
         self.n_components = 0
+        self.curvature = -1.0
         
         # e.g filename = mean_280519-video7_000-007_opened_cc02.png
         prefix, dot, name = str(filename).partition('-') # = mean_280519, -, video7_000-007_opened_cc02.png
@@ -80,7 +87,7 @@ class Trace():
                     trace += [[i,j]]
                     pixel_count += 1
         
-        print((self.min_i,self.max_i,self.min_j,self.max_j))
+        #print((self.min_i,self.max_i,self.min_j,self.max_j))
         
         self.trace = np.array(trace)
         self.white_number = pixel_count
@@ -148,7 +155,7 @@ class Trace():
         
     
         
-    def compute_estimators(self, radius=4, thr=0.5, tolerance=6, max_components_distance=8, high_thr = 0.5):
+    def compute_estimators(self, radius=4, thr=0.5, tolerance=6, max_components_distance=8, high_thr = 0.5, verbose = False):
         
         start_time = time.time()
         
@@ -163,7 +170,8 @@ class Trace():
         j_max = min(self.max_j + r + 1,self.matrix.shape[1])
         
         # compute density matrix, perimeter and area
-        print((i_min,i_max,j_min,j_max))
+        if verbose:
+            print((i_min,i_max,j_min,j_max))
         for i in range(i_min,i_max):
             for j in range(j_min,j_max):
                 q = 0
@@ -221,7 +229,8 @@ class Trace():
             n_components = len(self.components) + 1
             while len(self.components) < n_components:
                 n_components = len(self.components)
-                print('Checking components')
+                if verbose:
+                    print('Checking components')
                 for i,c in enumerate(self.components):
                     for i1,c1 in enumerate(self.components):
                         found = False
@@ -230,7 +239,8 @@ class Trace():
                         for p in c:
                             for p1 in c1:
                                 if (p1[0] - p[0])**2 + (p1[1] - p[1])**2 < max_components_distance**2:
-                                    print(i1,n_components)
+                                    if verbose:
+                                        print(i1,n_components)
                                     self.components.remove(self.components[i1])
                                     self.components[i] += c1
                                     found = True
@@ -286,11 +296,12 @@ class Trace():
                                 best_p1 = p1
                             if (p1[0] - p[0])**2 + (p1[1] - p[1])**2 > d1:
                                 d1 = (p1[0] - p[0])**2 + (p1[1] - p[1])**2
-                    print(d)
-                    values.append((np.sqrt(d),np.array([[best_p[0],best_p[1]],[best_p1[0],best_p1[1]]])))
+                    if verbose:
+                        print((i,i1,d))
+                    values.append((np.sqrt(d+np.random.uniform(0,1)),np.array([[best_p[0],best_p[1]],[best_p1[0],best_p1[1]]])))
             
             v = np.array(values,dtype=dtype)
-            v = np.sort(v,order='distance')
+            v = np.sort(v,order='distance',kind='mergesort')
             self.components_joints = v[:self.n_components-1] # = array([(12.3, list([124,233],[235,416])), ...])
             for c in self.components_joints:
                 self.extra_lenght += c[0]                    
@@ -301,6 +312,7 @@ class Trace():
             c = self.components_extremals[0]
             self.linear_lenght = np.sqrt((c[0][0] - c[1][0])**2 + (c[0][1] - c[1][1])**2)
         
+        # compute centroids
         for i,c in enumerate(self.components):
             self.components[i] = np.array(c)
             xm = np.mean(self.components[i][:,0])
@@ -314,12 +326,16 @@ class Trace():
         self.lenght, self.thickness = lt(perimeter,area,len(self.components_centroids))
         self.lenght += self.extra_lenght
         
-        self.curvature = self.lenght/self.linear_lenght
+        self.curvature = max(self.lenght/self.linear_lenght,1.)
         
         end_time = time.time()
         delta_t = end_time - start_time
+        
+        if verbose:
+            print(self.filename)
+            print((delta_t, perimeter, area, self.n_components, self.lenght, self.thickness, self.extra_lenght, self.curvature))
                 
-        return delta_t, perimeter, area, self.n_components, self.lenght, self.thickness, self.extra_lenght, self.curvature
+        return delta_t
                 
                             
                             

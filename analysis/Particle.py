@@ -7,6 +7,7 @@ Created on Sat Jun  8 15:18:06 2019
 """
 
 from Trace import Trace
+from Trasher import Trigger
 
 import os
 from tqdm import tqdm
@@ -19,35 +20,45 @@ class Particle:
         self.traces = traces
         self.lenght = 0
         self.thickness = 0
-        self.density = 0
+        self.n_components = 0
         self.curvature = 0
         self.persistence = 1
+        self.traces_names = []
         self.isready = False
         
     def Average(self):
         lenght = 0
         thickness = 0
-        density = 0
+        n_components = 0
         curvature = 0
+        self.traces_names = []
         
         for t in self.traces:
+            if t.lenght < 0:
+                t.compute_estimators()
             lenght += t.lenght
             thickness += t.thickness
-            density += t.density
+            n_components += t.n_components
             curvature += t.curvature
+            self.traces_names.append(t.filename)
         
         self.persistence = len(self.traces)
         self.lenght = lenght*1./len(self.traces)
         self.thickness = thickness*1./len(self.traces)
-        self.density = density*1./len(self.traces)
+        self.n_components = n_components*1./len(self.traces)
         self.curvature = curvature*1./len(self.traces)
         
         self.isready = True
         
+    def values(self):
+        if not self.isready:
+            self.Average()
+        return [self.lenght,self.thickness,self.n_components,self.curvature,self.persistence,self.traces_names]
+        
         
 
         
-def Join_Particles(folder,overlap_thr=0.5, verbose=True):
+def Join_Particles(folder,overlap_thr=0.5,autotrigger=True,eccentricity_thr=10,verbose=True):
     ID = 1
     particles = []
     
@@ -63,6 +74,9 @@ def Join_Particles(folder,overlap_thr=0.5, verbose=True):
         previous_name = segment+('-%03d' % (frameID - 1))
         
         t = Trace(folder,filename)
+        if autotrigger:
+            if not Trigger(t,eccentricity_thr=eccentricity_thr,verbose=verbose):
+                continue
         
         found = False
         for p in particles:

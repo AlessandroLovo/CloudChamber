@@ -35,6 +35,14 @@ def Opening(inputpath, inputfile, outputpath, outputfile, opening, verbose=False
     image_out = cv2.morphologyEx(image_in,cv2.MORPH_OPEN,kernel)
     cv2.imwrite(str(outputpath)+outputfile, image_out)
 
+def Closing(inputpath, inputfile, outputpath, outputfile, closing, verbose=False):
+    if verbose:
+        print('Opening \n')
+    image_in = cv2.imread(str(inputpath)+inputfile)
+    kernel = np.ones((closing,closing),np.uint8)
+    image_out = cv2.morphologyEx(image_in,cv2.MORPH_CLOSE,kernel)
+    cv2.imwrite(str(outputpath)+outputfile, image_out)
+
 #subtract background:
 def BackgroundSubtraction(inputpath, inputfile, inputbkg, outputpath, outputfile, verbose=False):
     if verbose:
