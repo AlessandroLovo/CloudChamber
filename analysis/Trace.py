@@ -322,8 +322,9 @@ class Trace():
         self.components_centroids = np.array(self.components_centroids)
             
                 
+        n = min(self.n_components,int(perimeter**2/(16*area)))
         
-        self.lenght, self.thickness = lt(perimeter,area,len(self.components_centroids))
+        self.lenght, self.thickness = lt(perimeter,area,n)
         self.lenght += self.extra_lenght
         
         self.curvature = max(self.lenght/self.linear_lenght,1.)

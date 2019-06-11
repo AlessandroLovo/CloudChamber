@@ -12,6 +12,17 @@ from Trasher import Trigger
 import os
 from tqdm import tqdm
 import numpy as np
+import time
+
+slim_particle_dtype = [('ID',int),('path',str),('names',list),('values',np.ndarray)]
+
+def what_index(key):
+    keys = ['persistence','lenght','thickness','n_components','curvature']
+    for i,k in enumerate(keys):
+        if k == key:
+            return i
+    print('index '+str(key)+' not found')
+    return len(keys) # in order to raise an out of range error
 
 class Particle:
     
@@ -26,7 +37,7 @@ class Particle:
         self.persistence = 1
         self.traces_names = []
         
-        self.slim_particle = []
+        self.slim_particle = 0
         self.isready = False
         
     def Average(self):
@@ -51,11 +62,11 @@ class Particle:
         self.n_components = n_components*1./len(self.traces)
         self.curvature = curvature*1./len(self.traces)
         
-        self.slim_particle = [self.path,self.ID,self.persistence,self.lenght,self.thickness,self.n_components,self.curvature,self.traces_names]
+        self.slim_particle = (self.ID,self.path,self.traces_names,np.array([self.persistence,self.lenght,self.thickness,self.n_components,self.curvature]))
         
         self.isready = True
         
-    def values(self):
+    def slim(self):
         if not self.isready:
             self.Average()
         return self.slim_particle
@@ -112,13 +123,14 @@ def Join_Particles(particles=[],start_ID=1,folder='./',overlap_thr=0.5,autotrigg
 def Big_iteration(particles=[],path='./',subdirectory='trigger_thr0.005_cl9_op3/cc_filtered_2den0.81_gausrad2.0/',
                   slim=False,overlap_thr=0.5,autotrigger=True,eccentricity_thr=10,verbose=True):
     
+    start_time = time.time()
     if len(particles) == 0:
         ID = 1
     else:
         ID = particles[0].ID + 1
     
     for folder in os.listdir(path):
-        subfolder = folder+'./'+subdirectory
+        subfolder = folder+'/'+subdirectory
         if not os.path.exists(path+subfolder):
             if verbose:
                 print(subfolder+' not found')
@@ -131,15 +143,19 @@ def Big_iteration(particles=[],path='./',subdirectory='trigger_thr0.005_cl9_op3/
         
         if slim:
             # save only the slim_particle
-            q = [h.values() for h in p]
+            q = [h.slim() for h in p]
             particles += q
         else:
             # save th whole particle
             particles += p
         
         ID += n
+        
+    end_time = time.time()
+    delta_t = end_time - start_time
+    print('Total time: '+str(delta_t)+' s')
     
-    return particles, ID - 1
+    return particles, ID - 1, slim
         
             
         
