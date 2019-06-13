@@ -259,6 +259,9 @@ class Trace():
                         break
         
         self.n_components = len(self.components)
+        if self.n_components == 0:
+            print(self.filename+': invalid particle')
+            return -1.0 # invalid particle
         
         # find components extremals
         self.components_extremals = []

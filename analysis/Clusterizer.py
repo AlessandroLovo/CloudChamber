@@ -23,9 +23,9 @@ def load_Clusterizer(name):
     c.values = np.stack(c.slim_particles['values'])
     return c
 
-def Join_Clusterizers(c1,c2,name):
+def Join_Clusterizers(c_list,name):
     c = Clusterizer(name,[],True)
-    c.slim_particles = np.concatenate(c1.slim_particles,c2.slim_particles)
+    c.slim_particles = np.concatenate([c1.slim_particles for c1 in c_list])
     c.values = np.stack(c.slim_particles['values'])
     return c
 

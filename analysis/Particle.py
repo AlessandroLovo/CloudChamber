@@ -50,13 +50,19 @@ class Particle:
         
         for t in self.traces:
             if t.lenght < 0:
-                t.compute_estimators()
+                time = t.compute_estimators()
+            if time < 0:
+                self.traces.remove(t)
+                continue
             lenght += t.lenght
             thickness += t.thickness
             n_components += t.n_components
             curvature += t.curvature
             self.traces_names.append(t.filename)
         
+        if len(self.traces) == 0:
+            # invalid particle
+            return -1
         self.persistence = len(self.traces)
         self.lenght = lenght*1./len(self.traces)
         self.thickness = thickness*1./len(self.traces)
@@ -67,10 +73,15 @@ class Particle:
         
         self.isready = True
         
+        return 0
+        
     def slim(self):
         if not self.isready:
-            self.Average()
-        return self.slim_particle
+            r = self.Average()
+        if r == 0:
+            return self.slim_particle
+        else:
+            return []
         
         
 
@@ -122,7 +133,7 @@ def Join_Particles(particles=[],start_ID=1,folder='./',overlap_thr=0.5,autotrigg
     return particles, ID - start_ID
 
 def Big_iteration(particles=[],path='./',subdirectory='trigger_thr0.005_cl9_op3/cc_filtered_2den0.81_gausrad2.0/',
-                  slim=False,overlap_thr=0.5,autotrigger=True,eccentricity_thr=10,verbose=True):
+                  slim=True,overlap_thr=0.5,autotrigger=True,eccentricity_thr=10,verbose=True,video_name=''):
     
     start_time = time.time()
     if len(particles) == 0:
@@ -138,16 +149,27 @@ def Big_iteration(particles=[],path='./',subdirectory='trigger_thr0.005_cl9_op3/
             continue
         if verbose:
             print('found '+subfolder)
+        if video_name != '':
+            video, dot, segment = folder.partition('_')
+            if video != video_name:
+                continue
         
         p, n = Join_Particles(particles=[],start_ID=ID,folder=path+subfolder,overlap_thr=overlap_thr,
                               autotrigger=autotrigger,eccentricity_thr=eccentricity_thr,verbose=verbose)
-        
+        if n == 0:
+            continue
         if slim:
             pool = Pool(6) # 6 threads
             
             # save only the slim_particle
             q = pool.map(Particle.slim,p)
+            # remove invalid particles
+            for h in q:
+                if len(h) == 0:
+                    q.remove(h)
+            
             particles += q
+            
         else:
             # save the whole particle
             particles += p
