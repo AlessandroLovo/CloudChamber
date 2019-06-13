@@ -13,11 +13,12 @@ import os
 from tqdm import tqdm
 import numpy as np
 import time
+from multiprocessing import Pool
 
-slim_particle_dtype = [('ID',int),('path',str),('names',list),('values',np.ndarray)]
+slim_particle_dtype = [('ID',int),('path','U200'),('names',list),('values',np.ndarray)]
+keys = ['persistence','lenght','thickness','n_components','curvature']
 
 def what_index(key):
-    keys = ['persistence','lenght','thickness','n_components','curvature']
     for i,k in enumerate(keys):
         if k == key:
             return i
@@ -142,11 +143,13 @@ def Big_iteration(particles=[],path='./',subdirectory='trigger_thr0.005_cl9_op3/
                               autotrigger=autotrigger,eccentricity_thr=eccentricity_thr,verbose=verbose)
         
         if slim:
+            pool = Pool(6) # 6 threads
+            
             # save only the slim_particle
-            q = [h.slim() for h in p]
+            q = pool.map(Particle.slim,p)
             particles += q
         else:
-            # save th whole particle
+            # save the whole particle
             particles += p
         
         ID += n

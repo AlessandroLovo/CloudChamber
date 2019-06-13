@@ -102,18 +102,21 @@ class Trace():
         self.inertia_eigenvectors = [[0,0],[0,0]]
         self.eccentricity_from_inertia = 0
         
-    def scatter_trace(self):
+    def scatter_trace(self,figname=''):
         #print(points)
         plt.figure()
         plt.title(self.filename)
         plt.scatter(self.trace[:,0],self.trace[:,1],marker='+')
         plt.scatter(self.perimeter_points[:,0],self.perimeter_points[:,1],marker='^',color='red')
-        plt.scatter(self.components_centroids[:,0],self.components_centroids[:,1],marker='o',color='green',s=500)
-        plt.scatter(self.components_extremals[:,:,0].flatten(),self.components_extremals[:,:,1].flatten(),marker='o',color='orange',s=500)
+        plt.scatter(self.components_centroids[:,0],self.components_centroids[:,1],marker='o',color='green',s=50)
+        plt.scatter(self.components_extremals[:,:,0].flatten(),self.components_extremals[:,:,1].flatten(),marker='o',color='orange',s=50)
         for c in self.components_joints:
-            plt.plot(c[1][:,0],c[1][:,1],color='orange',linewidth = 5)
+            plt.plot(c[1][:,0],c[1][:,1],color='orange',linewidth = 2)
         #plt.contour(self.density_matrix.T,levels=[0.25,0.5,0.75,1])
-        plt.show()
+        if figname == '':
+            plt.show()
+        else:
+            plt.savefig(figname)
         
     def compute_basics(self):
         self.compute_centroid()
@@ -155,7 +158,7 @@ class Trace():
         
     
         
-    def compute_estimators(self, radius=4, thr=0.5, tolerance=6, max_components_distance=8, high_thr = 0.5, verbose = False):
+    def compute_estimators(self,radius=6,thr=0.5,tolerance=10,max_components_distance=8,min_comp_size=50,verbose=False):
         
         start_time = time.time()
         
@@ -192,14 +195,12 @@ class Trace():
                 if q == 0:
                     continue
                 int_thr = int(thr*count)
-                int_high_thr = int(high_thr*count)
                 
                 if (q <= int_thr and q >= int_thr - tolerance):
                     perimeter += 1
                     self.perimeter_points.append([i,j])
                 if q >= int_thr:
                     area += 1
-                if q >= int_high_thr:
                     components_points.append([i,j])
                 self.density_matrix[i,j] = q*1.0/count
         
@@ -224,7 +225,12 @@ class Trace():
             if not found:
                 self.components.append([[p[0],p[1]]])
                 
-        # check components again
+        # remove too small components
+        for c in self.components:
+            if len(c) < min_comp_size:
+                self.components.remove(c)
+        
+        # join components
         if len(self.components) > 1:
             n_components = len(self.components) + 1
             while len(self.components) < n_components:
