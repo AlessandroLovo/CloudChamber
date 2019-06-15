@@ -16,18 +16,32 @@ import os
 
 
 
-def load_Clusterizer(name):
-    filename = name + '.npy'
+def load_Clusterizer(path,name):
+    filename = path + name + '.npy'
     c = Clusterizer(name,[],True)
     c.slim_particles = np.load(filename)
     c.values = np.stack(c.slim_particles['values'])
     return c
 
-def Join_Clusterizers(c_list,name):
+def join_Clusterizers(c_list,name):
     c = Clusterizer(name,[],True)
     c.slim_particles = np.concatenate([c1.slim_particles for c1 in c_list])
     c.values = np.stack(c.slim_particles['values'])
     return c
+
+def plot_Clusterizers(c_list,color_list):
+    def graph(c_l,color_l,key_x,key_y):
+        fig, ax = plt.subplots()
+        ax.set_xlabel(key_x)
+        ax.set_ylabel(key_y)
+        for i,c in enumerate(c_l):
+            ax = plt.scatter(c.values[:,Particle.what_index(key_x)],
+                            c.values[:,Particle.what_index(key_y)],marker='o',alpha=0.5,color=color_l[i],label=c.name)
+        ax = plt.legend()
+    
+    ipywidgets.interact(graph, c_l = ipywidgets.fixed(c_list), color_l = ipywidgets.fixed(color_list),
+                        key_x = Particle.keys, key_y = Particle.keys)
+    
 
 class Clusterizer:
     
@@ -51,13 +65,13 @@ class Clusterizer:
             self.slim_particles = []
             self.values = []
             
-    def save(self,name=''):
+    def save(self,path='./',name=''):
         if len(self.slim_particles) == 0:
             print(self.name+' is empty: not saving')
             return
         if name == '':
             name = self.name
-        np.save(name,self.slim_particles)
+        np.save(path+name,self.slim_particles)
     
     def add_particles(self,particles,slim):
         if slim:
@@ -71,13 +85,13 @@ class Clusterizer:
         self.values = np.stack(self.slim_particles['values'])
         
     
-    def plot_simple(self,key_x,key_y):
+    def plot_simple(self,key_x,key_y,colour='black'):
         plt.figure()
         plt.title(self.name)
         plt.xlabel(key_x)
         plt.ylabel(key_y)
         plt.scatter(self.values[:,Particle.what_index(key_x)],
-                            self.values[:,Particle.what_index(key_y)],marker='o',color='black')
+                            self.values[:,Particle.what_index(key_y)],marker='o',color=colour)
         plt.show()
         
         
@@ -91,10 +105,11 @@ class Clusterizer:
         Use the lists to select axis
         
         Click near a data point to select it:
-            press 'f' to view its frame picture
-            press 't' to view its trace analysis (takes a bit of time)
-            press 'n' to go to the next trace of that particle
-            press 'w' to close all figures windows 
+            press 'f' to view its Frame picture
+            press 't' to view its Trace analysis (takes a bit of time)
+            press 'n' to go to the Next trace of that particle
+            press 'r' to Recall the selected particle after you changed the axis
+            press 'w' to close (Waste) all figures windows 
         '''
         
         def graph(c,key_x,key_y):
@@ -136,13 +151,24 @@ class Clusterizer:
             def onpress(event):
                 path = c.slim_particles[c.old_index][1]
                 filename = c.slim_particles[c.old_index][2][c.old_j]
+                if not os.path.exists(path+filename):
+                    # try going to next segment
+                    prefix,dot,suffix = path.partition('/trigger') # .../video7_000, /trigger, _thr0.005_cl9_op3/cc_filtered_2den0.81_gausrad2.0/
+                    next_segment_ID = int(prefix[-3:]) + 1
+                    path = prefix[:-3]+('%03d' % next_segment_ID)+dot+suffix
                 #os.system('killall eog')
                 
                 if event.key == 'n':    # next trace of this particle
                     c.old_j = (c.old_j + 1) % len(c.slim_particles[c.old_index][2])
                     ax = plt.suptitle('particle %d: frame %d/%d' % (c.slim_particles[c.old_index][0],
                                                                 c.old_j + 1, len(c.slim_particles[c.old_index][2])))
-                    os.system('eog '+path+filename+' &')
+                    
+                elif event.key == 'r':  # recall last particle when changing view
+                    ax = plt.suptitle('particle %d: frame %d/%d' % (c.slim_particles[c.old_index][0],
+                                                                c.old_j + 1, len(c.slim_particles[c.old_index][2])))
+                    ax = plt.scatter(c.values[c.old_index,Particle.what_index(key_x)],
+                            c.values[c.old_index,Particle.what_index(key_y)],marker='o',color='orange')
+                    #os.system('eog '+path+filename+' &')
                 elif event.key == 'f': # show frame
                     os.system('eog '+path+filename+' &')
                 elif event.key == 't': # show trace analysis

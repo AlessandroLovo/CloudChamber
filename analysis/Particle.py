@@ -156,29 +156,76 @@ def Big_iteration(particles=[],path='./',subdirectory='trigger_thr0.005_cl9_op3/
         
         p, n = Join_Particles(particles=[],start_ID=ID,folder=path+subfolder,overlap_thr=overlap_thr,
                               autotrigger=autotrigger,eccentricity_thr=eccentricity_thr,verbose=verbose)
+        
         if n == 0:
             continue
-        if slim:
-            pool = Pool(6) # 6 threads
-            
-            # save only the slim_particle
-            q = pool.map(Particle.slim,p)
-            # remove invalid particles
-            for h in q:
-                if len(h) == 0:
-                    q.remove(h)
-            
-            particles += q
-            
-        else:
-            # save the whole particle
-            particles += p
+        # check for overlap between consequent segments
+        min_l = min(10,len(particles))
+        for q in particles[-min_l:]:
+            if len(q.traces_names) == 0:
+                continue
+            last_trace_name = q.traces[-1].filename
+            prefix, dot, name = str(last_trace_name).partition('-') # = mean_280519, -, video7_000-007_opened_cc02.png
+            segment, dot, suffix1 = name.partition('-') # = video7_000, -, 007_opened_cc02.png
+            last_frame, dot, suffix2 = suffix1.partition('_') # = 007, _, opened_cc02.png
+            if last_frame == '048':
+                last_videoID,dot,last_segment_ID = segment.partition('_') # video7, _, 000
+                min_m = min(10,len(p) - 1)
+                for r in p[:min_m]:
+                    if len(r.traces) == 0:
+                        continue
+                    first_trace_name = r.traces[0].filename
+                    prefix, dot, name = str(first_trace_name).partition('-') # = mean_280519, -, video7_000-007_opened_cc02.png
+                    segment, dot, suffix1 = name.partition('-') # = video7_000, -, 007_opened_cc02.png
+                    first_frame, dot, suffix2 = suffix1.partition('_') # = 007, _, opened_cc02.png
+                    if first_frame == '001':
+                        first_videoID,dot,first_segment_ID = segment.partition('_') # video7, _, 000
+                        if (first_videoID == last_videoID and int(first_segment_ID) == int(last_segment_ID) + 1):
+                            last_t = q.traces[-1]
+                            first_t = r.traces[0]
+                            diff_matrix = np.abs(last_t.matrix - first_t.matrix)
+                            
+                            # compute white_number for diff_matrix
+                            n_whites = 0
+                            for x in diff_matrix:
+                                for y in x:
+                                    if y > 0:
+                                        n_whites += 1
+                            
+                            overlap = 1.0 - n_whites/(last_t.white_number + first_t.white_number)
+                            if verbose:
+                                print('Possible joint over segments detected: overlap = '+str(overlap))
+                            if overlap >= overlap_thr:
+                                if verbose:
+                                    print('\n joining particles at the beginning of '+segment)
+                                n -= 1
+                                p.remove(r)
+                                q.traces += r.traces
         
+        particles += p
         ID += n
+    
+    if slim:
+        if verbose:
+            print(('\nSlimming %d particles' % ID))
+        pool = Pool(6) # 6 threads
+        slim_particles = pool.map(Particle.slim,particles)
+        # remove invalid particles
+        for h in slim_particles:
+            if len(h) == 0:
+                slim_particles.remove(h)
+                ID -= 1
+        
+        particles = slim_particles
+        
+        
         
     end_time = time.time()
-    delta_t = end_time - start_time
-    print('Total time: '+str(delta_t)+' s')
+    delta_t = int(end_time - start_time)
+    hs = int(delta_t/3600)
+    mins = int((delta_t - hs*3600)/60)
+    secs = int(delta_t - hs*3600 - mins*60)
+    print('Total time: {0} h {1} min {2} s'.format(hs,mins,secs))
     
     return particles, ID - 1, slim
         
