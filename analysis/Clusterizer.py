@@ -42,6 +42,26 @@ def plot_Clusterizers(c_list,color_list):
     ipywidgets.interact(graph, c_l = ipywidgets.fixed(c_list), color_l = ipywidgets.fixed(color_list),
                         key_x = Particle.keys, key_y = Particle.keys)
     
+def alpha_selector(v,thrs=[0,50,15,10,2]):
+    if v[0] < thrs[0]:  # persistence
+        return False
+    if v[1] > thrs[1]:  # lenght
+        return False
+    if v[2] < thrs[2]:  # thickness
+        return False
+    if v[3] > thrs[3]:  # n_components
+        return False
+    if v[4] > thrs[4]:  # curvature
+        return False
+    return True
+    
+def sub_Clusterizer(clusterizer_in,newname,func=alpha_selector):
+    particles = []
+    for i,v in enumerate(clusterizer_in.values):
+        if func(v):
+            particles.append(clusterizer_in.slim_particles[i])
+    c = Clusterizer(newname,particles,False)
+    return c
 
 class Clusterizer:
     

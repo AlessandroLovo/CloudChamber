@@ -112,6 +112,7 @@ class Trace():
         plt.scatter(self.components_extremals[:,:,0].flatten(),self.components_extremals[:,:,1].flatten(),marker='o',color='orange',s=50)
         for c in self.components_joints:
             plt.plot(c[1][:,0],c[1][:,1],color='orange',linewidth = 2)
+        plt.figtext(0.1,0.03,'lenght = %.1f, thickness = %.2f, n_components = %d, curvature = %.3f' % (self.lenght,self.thickness,self.n_components,self.curvature))
         #plt.contour(self.density_matrix.T,levels=[0.25,0.5,0.75,1])
         if figname == '':
             plt.show()
