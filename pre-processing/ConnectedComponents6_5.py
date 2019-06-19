@@ -121,6 +121,8 @@ def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discri
         
     #loop on frames
     for file_raw in tqdm(os.listdir(input_folder)):
+        if not file_raw.startswith(raw_video):
+            continue
         if not file_raw.endswith('.png'):
             continue
         if (file_raw.endswith('0-001.png') or file_raw.endswith('0-002.png') or file_raw.endswith('0-003.png')):
@@ -131,6 +133,9 @@ def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discri
         raw_file_name1, dot, raw_file_name2 = raw_file_name.partition('-')
         raw_file_name3, dot, raw_file_name4 = raw_file_name2.partition('-')
         raw_file_name5, dot, raw_file_name6 = raw_file_name4.partition('-')
+        #if video.find('_') > 0:
+         #   if int(raw_file_name5[-3:]) > int(video[-3:]):
+          #      break
         if raw_file_name5 != video:
             continue
         #selecting via discriminant value

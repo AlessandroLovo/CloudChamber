@@ -71,6 +71,7 @@ class Clusterizer:
         
         self.old_index = 0
         self.old_j = 0
+        self.same_frame = []
         
         
         if len(particles) != 0:
@@ -125,10 +126,12 @@ class Clusterizer:
         Use the lists to select axis
         
         Click near a data point to select it:
-            press 'f' to view its Frame picture
+            press 'f' to view its pre-processed Frame picture
             press 't' to view its Trace analysis (takes a bit of time)
             press 'n' to go to the Next trace of that particle
             press 'r' to Recall the selected particle after you changed the axis
+            press 'e' to view its frame from the vidEo
+            press 'a' to highlight All components in the same video frame of the selected particle
             press 'w' to close (Waste) all figures windows 
         '''
         
@@ -137,72 +140,101 @@ class Clusterizer:
             fig, ax = plt.subplots()
             ax.set_title(c.name)
             ax.set_xlabel(key_x)
-            ax.set_ylabel(key_y)
+            if key_x != key_y:
+                ax.set_ylabel(key_y)
+                ax = plt.scatter(c.values[:,Particle.what_index(key_x)],
+                                c.values[:,Particle.what_index(key_y)],marker='o',color='black')
             
-            #x = np.arange(0,10)
-            #y = x**2
-            #ax.scatter(x,y)
+            else:
+                ax.set_ylabel('counts')
+                ax = plt.hist(c.values[:,Particle.what_index(key_x)],bins=30,histtype='step')
             ax = plt.suptitle('')
-            ax = plt.scatter(c.values[:,Particle.what_index(key_x)],
-                            c.values[:,Particle.what_index(key_y)],marker='o',color='black')
-        
-        
         
             def onclick(event):
-                ix = event.xdata
-                iy = event.ydata
-                
-                #ax = plt.scatter(ix,iy,color='orange')
-                c.old_j = 0
-                ax = plt.scatter(c.values[c.old_index,Particle.what_index(key_x)],
-                            c.values[c.old_index,Particle.what_index(key_y)],marker='o',color='black')
-                d = 100.0
-                for i,p in enumerate(c.values):
-                    d1 = (ix - p[Particle.what_index(key_x)])**2 + (iy - p[Particle.what_index(key_y)])**2
-                    if d > d1:
-                        c.old_index = i
-                        d = d1
-                
-                ax = plt.suptitle('particle %d: frame %d/%d' % (c.slim_particles[c.old_index][0],
-                                                                c.old_j + 1, len(c.slim_particles[c.old_index][2])))
-                ax = plt.scatter(c.values[c.old_index,Particle.what_index(key_x)],
-                            c.values[c.old_index,Particle.what_index(key_y)],marker='o',color='orange')
+                if key_x != key_y:
+                    ix = event.xdata
+                    iy = event.ydata
+                    
+                    #ax = plt.scatter(ix,iy,color='orange')
+                    c.old_j = 0
+                    if c.old_index in c.same_frame:
+                        ax = plt.scatter(c.values[c.old_index,Particle.what_index(key_x)],
+                                c.values[c.old_index,Particle.what_index(key_y)],marker='o',color='red')
+                    else:
+                        ax = plt.scatter(c.values[c.old_index,Particle.what_index(key_x)],
+                                c.values[c.old_index,Particle.what_index(key_y)],marker='o',color='black')
+                    d = 100.0
+                    for i,p in enumerate(c.values):
+                        d1 = (ix - p[Particle.what_index(key_x)])**2 + (iy - p[Particle.what_index(key_y)])**2
+                        if d > d1:
+                            c.old_index = i
+                            d = d1
+                    
+                    ax = plt.suptitle('particle %d: frame %d/%d' % (c.slim_particles[c.old_index][0],
+                                                                    c.old_j + 1, len(c.slim_particles[c.old_index][2])))
+                    ax = plt.scatter(c.values[c.old_index,Particle.what_index(key_x)],
+                                c.values[c.old_index,Particle.what_index(key_y)],marker='o',color='orange')
                 
             def onpress(event):
-                path = c.slim_particles[c.old_index][1]
-                filename = c.slim_particles[c.old_index][2][c.old_j]
-                if not os.path.exists(path+filename):
-                    # try going to next segment
-                    prefix,dot,suffix = path.partition('/trigger') # .../video7_000, /trigger, _thr0.005_cl9_op3/cc_filtered_2den0.81_gausrad2.0/
-                    next_segment_ID = int(prefix[-3:]) + 1
-                    path = prefix[:-3]+('%03d' % next_segment_ID)+dot+suffix
-                #os.system('killall eog')
-                
-                if event.key == 'n':    # next trace of this particle
-                    c.old_j = (c.old_j + 1) % len(c.slim_particles[c.old_index][2])
-                    ax = plt.suptitle('particle %d: frame %d/%d' % (c.slim_particles[c.old_index][0],
-                                                                c.old_j + 1, len(c.slim_particles[c.old_index][2])))
+                if key_x != key_y:
+                    path = c.slim_particles[c.old_index][1]
+                    filename = c.slim_particles[c.old_index][2][c.old_j]
+                    if not os.path.exists(path+filename):
+                        # try going to next segment
+                        prefix,dot,suffix = path.partition('/trigger') # .../video7_000, /trigger, _thr0.005_cl9_op3/cc_filtered_2den0.81_gausrad2.0/
+                        next_segment_ID = int(prefix[-3:]) + 1
+                        path = prefix[:-3]+('%03d' % next_segment_ID)+dot+suffix
+                    #os.system('killall eog')
                     
-                elif event.key == 'r':  # recall last particle when changing view
-                    ax = plt.suptitle('particle %d: frame %d/%d' % (c.slim_particles[c.old_index][0],
-                                                                c.old_j + 1, len(c.slim_particles[c.old_index][2])))
-                    ax = plt.scatter(c.values[c.old_index,Particle.what_index(key_x)],
-                            c.values[c.old_index,Particle.what_index(key_y)],marker='o',color='orange')
-                    #os.system('eog '+path+filename+' &')
-                elif event.key == 'f': # show frame
-                    os.system('eog '+path+filename+' &')
-                elif event.key == 't': # show trace analysis
-                    t = Trace(path,filename)
-                    t.compute_estimators()
-                    t.scatter_trace('temp.png')
-                    os.system('eog temp.png &')
-                elif event.key == 'w':
-                    ax = plt.suptitle('')
-                    os.system('killall eog')
-                    ax = plt.scatter(c.values[c.old_index,Particle.what_index(key_x)],
-                            c.values[c.old_index,Particle.what_index(key_y)],marker='o',color='black')
-                    
-                
+                    if event.key == 'n':    # next trace of this particle
+                        c.old_j = (c.old_j + 1) % len(c.slim_particles[c.old_index][2])
+                        ax = plt.suptitle('particle %d: frame %d/%d' % (c.slim_particles[c.old_index][0],
+                                                                    c.old_j + 1, len(c.slim_particles[c.old_index][2])))
+                        
+                    elif event.key == 'r':  # recall last particle when changing view
+                        ax = plt.suptitle('particle %d: frame %d/%d' % (c.slim_particles[c.old_index][0],
+                                                                    c.old_j + 1, len(c.slim_particles[c.old_index][2])))
+                        ax = plt.scatter(c.values[c.old_index,Particle.what_index(key_x)],
+                                c.values[c.old_index,Particle.what_index(key_y)],marker='o',color='orange')
+                        #os.system('eog '+path+filename+' &')
+                    elif event.key == 'f': # show frame
+                        os.system('eog '+path+filename+' &')
+                    elif event.key == 't': # show trace analysis
+                        t = Trace(path,filename)
+                        t.compute_estimators()
+                        t.scatter_trace('temp.png')
+                        os.system('eog temp.png &')
+                    elif event.key == 'a':
+                        ax = plt.scatter(c.values[:,Particle.what_index(key_x)],
+                                c.values[:,Particle.what_index(key_y)],marker='o',color='black')
+                        prefix1,dot,suffix1 = filename.partition('_')   # mean, _, 280519-video7_000-009_opened_cc10.png
+                        prefix2,dot,suffix2 = suffix1.partition('_')    # 280519-video7, _, 000-009_opened_cc10.png
+                        prefix3,dot,suffix3 = suffix2.partition('_')    # 000-009, _, opened_cc10.png
+                        beginnung = prefix1+dot+prefix2+dot+prefix3+dot # mean_280519-video7_000-009_
+                        for i,p in enumerate(c.slim_particles):
+                            for name in p[2]:
+                                if name.startswith(beginnung):
+                                    c.same_frame.append(i)
+                        for i in c.same_frame:
+                            ax = plt.scatter(c.values[i,Particle.what_index(key_x)],
+                                c.values[i,Particle.what_index(key_y)],marker='o',color='red')
+                    elif event.key == 'e':
+                        raw_path = '/media/alessandro/DATA/tesi/Nebbia/raw_data/'
+                        prefix,dot,suffix = path.partition('/trigger') # .../video7_000, /trigger, _thr0.005_cl9_op3/cc_filtered_2den0.81_gausrad2.0/
+                        pattume,dot,suffix2 = prefix.partition('pre-processed_data/') # .../, pre-processed_data/, 280519/video7_000
+                        add_path = suffix2[:-4]+'/frames/'     # 280519/video7/frames/
+                        prefix1,dot,suffix3 = filename.partition('-')   # mean_280519, -, video7_000-009_opened_cc10.png
+                        prefix2,dot,data = prefix1.partition('_')       # mean, _, 280519
+                        segment,dot,suffix4 = suffix3.partition('-')    # video7_000, -, 009_opened_cc10.png
+                        frame,dot,suffix5 = suffix4.partition('_')      # 009, _, opened_cc10.png
+                        frame_name = 'outvid-'+data+'-'+segment+'-'+frame+'.png'
+                        os.system('eog '+raw_path+add_path+frame_name+' &')
+                    elif event.key == 'w':
+                        ax = plt.suptitle('')
+                        os.system('killall eog')
+                        ax = plt.scatter(c.values[:,Particle.what_index(key_x)],
+                                c.values[:,Particle.what_index(key_y)],marker='o',color='black')
+                        c.same_frame = []
                 
             cid = fig.canvas.mpl_connect('button_press_event', onclick)
             cid2 = fig.canvas.mpl_connect('key_press_event', onpress)

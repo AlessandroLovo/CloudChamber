@@ -149,7 +149,7 @@ def LLoyd(X, centers, maxiter):
                 centers[idx_centroid] = np.mean( X[c_idx == idx_centroid], axis=0)
         #Check for convergence
         if ( np.sum(c_idx - idx_prev) == 0):
-            print("LLoyd's algorithm: convergence reached")
+            print("LLoyd's algorithm: convergence reached after %d iterations" % idx_iter)
             break
         idx_prev = c_idx
        
