@@ -14,18 +14,40 @@ import matplotlib.pyplot as plt
 import ipywidgets
 import os
 
+color_list = ['black','yellow','green']
+
+def color(n):
+    if type(n) == int:
+        return color_list[n]
+    elif type(n) == np.ndarray:
+        r = []
+        for nn in n:
+            r.append(color_list[nn])
+        return np.array(r)
+    elif type(n) == list:
+        r = []
+        for nn in n:
+            r.append(color_list[nn])
+        return r
+    else:
+        raise TypeError
 
 
 def load_Clusterizer(path,name):
     filename = path + name + '.npy'
     c = Clusterizer(name,[],True)
+    c.path = path
     c.slim_particles = np.load(filename)
     c.values = np.stack(c.slim_particles['values'])
+    c.labels = np.zeros(len(c.values),dtype=int)
+    if os.path.exists(path+name+'_labels.npy'):
+        c.labels = np.load(path+name+'_labels.npy')
     return c
 
 def join_Clusterizers(c_list,name):
     c = Clusterizer(name,[],True)
     c.slim_particles = np.concatenate([c1.slim_particles for c1 in c_list])
+    c.labels = np.concatenate([c1.labels for c1 in c_list])
     c.values = np.stack(c.slim_particles['values'])
     return c
 
@@ -69,9 +91,12 @@ class Clusterizer:
         
         self.name = name
         
+        self.path = './'
+        
         self.old_index = 0
         self.old_j = 0
         self.same_frame = []
+        
         
         
         if len(particles) != 0:
@@ -82,17 +107,22 @@ class Clusterizer:
                 self.slim_particles = np.array(slim_particles,dtype=Particle.slim_particle_dtype)
     
             self.values = np.stack(self.slim_particles['values'])
+            self.labels = np.zeros(len(self.values),dtype=int)
         else:
             self.slim_particles = []
             self.values = []
+            self.labels = []
             
-    def save(self,path='./',name=''):
+    def save(self,path='',name=''):
         if len(self.slim_particles) == 0:
             print(self.name+' is empty: not saving')
             return
         if name == '':
             name = self.name
+        if path == '':
+            path = self.path
         np.save(path+name,self.slim_particles)
+        np.save(path+name+'_labels',self.labels)
     
     def add_particles(self,particles,slim):
         if slim:
@@ -133,6 +163,8 @@ class Clusterizer:
             press 'e' to view its frame from the vidEo
             press 'a' to highlight All components in the same video frame of the selected particle
             press 'w' to close (Waste) all figures windows 
+            press 'b' to change the laBel of the selected particle
+            press 's' to Save the capacitor
         '''
         
         def graph(c,key_x,key_y):
@@ -143,7 +175,7 @@ class Clusterizer:
             if key_x != key_y:
                 ax.set_ylabel(key_y)
                 ax = plt.scatter(c.values[:,Particle.what_index(key_x)],
-                                c.values[:,Particle.what_index(key_y)],marker='o',color='black')
+                                c.values[:,Particle.what_index(key_y)],marker='o',color=color(c.labels))
             
             else:
                 ax.set_ylabel('counts')
@@ -162,7 +194,7 @@ class Clusterizer:
                                 c.values[c.old_index,Particle.what_index(key_y)],marker='o',color='red')
                     else:
                         ax = plt.scatter(c.values[c.old_index,Particle.what_index(key_x)],
-                                c.values[c.old_index,Particle.what_index(key_y)],marker='o',color='black')
+                                c.values[c.old_index,Particle.what_index(key_y)],marker='o',color=color(c.labels)[c.old_index])
                     d = 100.0
                     for i,p in enumerate(c.values):
                         d1 = (ix - p[Particle.what_index(key_x)])**2 + (iy - p[Particle.what_index(key_y)])**2
@@ -206,7 +238,7 @@ class Clusterizer:
                         os.system('eog temp.png &')
                     elif event.key == 'a':
                         ax = plt.scatter(c.values[:,Particle.what_index(key_x)],
-                                c.values[:,Particle.what_index(key_y)],marker='o',color='black')
+                                c.values[:,Particle.what_index(key_y)],marker='o',color=color(c.labels))
                         prefix1,dot,suffix1 = filename.partition('_')   # mean, _, 280519-video7_000-009_opened_cc10.png
                         prefix2,dot,suffix2 = suffix1.partition('_')    # 280519-video7, _, 000-009_opened_cc10.png
                         prefix3,dot,suffix3 = suffix2.partition('_')    # 000-009, _, opened_cc10.png
@@ -228,14 +260,20 @@ class Clusterizer:
                         segment,dot,suffix4 = suffix3.partition('-')    # video7_000, -, 009_opened_cc10.png
                         frame,dot,suffix5 = suffix4.partition('_')      # 009, _, opened_cc10.png
                         frame_name = 'outvid-'+data+'-'+segment+'-'+frame+'.png'
-                        os.system('eog '+raw_path+add_path+frame_name+' &')
+                        os.system('eog '+raw_path+add_path+frame_name+' &')                    
                     elif event.key == 'w':
                         ax = plt.suptitle('')
                         os.system('killall eog')
                         ax = plt.scatter(c.values[:,Particle.what_index(key_x)],
-                                c.values[:,Particle.what_index(key_y)],marker='o',color='black')
+                                c.values[:,Particle.what_index(key_y)],marker='o',color=color(c.labels))
                         c.same_frame = []
-                
+                    elif event.key == 'b':
+                        c.labels[c.old_index] = (c.labels[c.old_index] + 1) % len(color_list)
+                        ax = plt.scatter(c.values[:,Particle.what_index(key_x)],
+                                c.values[:,Particle.what_index(key_y)],marker='o',color=color(c.labels))
+                    elif event.key == 's':
+                        c.save()
+                    
             cid = fig.canvas.mpl_connect('button_press_event', onclick)
             cid2 = fig.canvas.mpl_connect('key_press_event', onpress)
         
