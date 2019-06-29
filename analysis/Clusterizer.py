@@ -14,24 +14,11 @@ import matplotlib.pyplot as plt
 import ipywidgets
 import os
 
-color_list = ['black','yellow','green']
+color_list = ['black','brown','blue','purple']
 
+@np.vectorize
 def color(n):
-    if type(n) == int:
-        return color_list[n]
-    elif type(n) == np.ndarray:
-        r = []
-        for nn in n:
-            r.append(color_list[nn])
-        return np.array(r)
-    elif type(n) == list:
-        r = []
-        for nn in n:
-            r.append(color_list[nn])
-        return r
-    else:
-        raise TypeError
-
+    return color_list[n]
 
 def load_Clusterizer(path,name):
     filename = path + name + '.npy'
@@ -64,7 +51,7 @@ def plot_Clusterizers(c_list,color_list):
     ipywidgets.interact(graph, c_l = ipywidgets.fixed(c_list), color_l = ipywidgets.fixed(color_list),
                         key_x = Particle.keys, key_y = Particle.keys)
     
-def alpha_selector(v,thrs=[0,50,15,10,2]):
+def alpha_selector(v,thrs=[2,50,15,10,1.5]):
     if v[0] < thrs[0]:  # persistence
         return False
     if v[1] > thrs[1]:  # lenght
@@ -84,6 +71,37 @@ def sub_Clusterizer(clusterizer_in,newname,func=alpha_selector):
             particles.append(clusterizer_in.slim_particles[i])
     c = Clusterizer(newname,particles,False)
     return c
+
+def classify(c,func=alpha_selector,thrs=[2,50,15,10,1.5],verbose=True):
+    labels = np.copy(c.labels)
+    false_positives = 0
+    false_negatives = 0
+    positives = 0
+    real_signals = 0
+    for i,v in enumerate(c.values):
+        if func(v,thrs=thrs):
+            labels[i] = 1
+            positives += 1
+            if c.labels[i] != 1:
+                false_positives += 1
+                labels[i] = 3
+            else:
+                real_signals += 1
+        else:
+            labels[i] = 0
+            if c.labels[i] == 1:
+                real_signals += 1
+                false_negatives += 1
+                labels[i] = 2
+    if verbose:
+        print('real signals, believed signals, false signals, missed signals')
+        print(real_signals,positives,false_positives,false_negatives)
+    efficiency = (positives - false_positives)*1./(positives - false_positives + false_negatives)
+    pureness = 1 - false_positives*1./positives
+    
+    
+    return labels, efficiency, pureness
+        
 
 class Clusterizer:
     
@@ -147,7 +165,7 @@ class Clusterizer:
         
         
     
-    def plot(self):
+    def plot(self,labels=[]):
         '''
         Before running this function type
         
@@ -165,7 +183,11 @@ class Clusterizer:
             press 'w' to close (Waste) all figures windows 
             press 'b' to change the laBel of the selected particle
             press 's' to Save the capacitor
+            
+        If you want to use diffrent labels for the data point run plot(labels=<mylabels>)
         '''
+        if len(labels) == 0:
+            labels = self.labels
         
         def graph(c,key_x,key_y):
             global ax
@@ -175,7 +197,7 @@ class Clusterizer:
             if key_x != key_y:
                 ax.set_ylabel(key_y)
                 ax = plt.scatter(c.values[:,Particle.what_index(key_x)],
-                                c.values[:,Particle.what_index(key_y)],marker='o',color=color(c.labels))
+                                c.values[:,Particle.what_index(key_y)],marker='o',color=color(labels))
             
             else:
                 ax.set_ylabel('counts')
@@ -194,7 +216,7 @@ class Clusterizer:
                                 c.values[c.old_index,Particle.what_index(key_y)],marker='o',color='red')
                     else:
                         ax = plt.scatter(c.values[c.old_index,Particle.what_index(key_x)],
-                                c.values[c.old_index,Particle.what_index(key_y)],marker='o',color=color(c.labels)[c.old_index])
+                                c.values[c.old_index,Particle.what_index(key_y)],marker='o',color=color(labels)[c.old_index])
                     d = 100.0
                     for i,p in enumerate(c.values):
                         d1 = (ix - p[Particle.what_index(key_x)])**2 + (iy - p[Particle.what_index(key_y)])**2
@@ -238,7 +260,7 @@ class Clusterizer:
                         os.system('eog temp.png &')
                     elif event.key == 'a':
                         ax = plt.scatter(c.values[:,Particle.what_index(key_x)],
-                                c.values[:,Particle.what_index(key_y)],marker='o',color=color(c.labels))
+                                c.values[:,Particle.what_index(key_y)],marker='o',color=color(labels))
                         prefix1,dot,suffix1 = filename.partition('_')   # mean, _, 280519-video7_000-009_opened_cc10.png
                         prefix2,dot,suffix2 = suffix1.partition('_')    # 280519-video7, _, 000-009_opened_cc10.png
                         prefix3,dot,suffix3 = suffix2.partition('_')    # 000-009, _, opened_cc10.png
@@ -265,12 +287,12 @@ class Clusterizer:
                         ax = plt.suptitle('')
                         os.system('killall eog')
                         ax = plt.scatter(c.values[:,Particle.what_index(key_x)],
-                                c.values[:,Particle.what_index(key_y)],marker='o',color=color(c.labels))
+                                c.values[:,Particle.what_index(key_y)],marker='o',color=color(labels))
                         c.same_frame = []
                     elif event.key == 'b':
                         c.labels[c.old_index] = (c.labels[c.old_index] + 1) % len(color_list)
                         ax = plt.scatter(c.values[:,Particle.what_index(key_x)],
-                                c.values[:,Particle.what_index(key_y)],marker='o',color=color(c.labels))
+                                c.values[:,Particle.what_index(key_y)],marker='o',color=color(labels))
                     elif event.key == 's':
                         c.save()
                     

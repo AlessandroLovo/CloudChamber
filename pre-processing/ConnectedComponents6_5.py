@@ -170,6 +170,9 @@ def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discri
         log_text.close()
         if verbose:
             print('Total number of background images processed: '+str(n_backgrounds)+'\n')
+            
+        #raw_image manipulation before subtracting
+        Filters.Denoising1(input_folder, file_raw, output_folder, 'raw_denoising1.png', denoising1)
     	
         for file in os.listdir(input_folder):
             if (file.startswith(raw_video)):
@@ -183,8 +186,6 @@ def ConnectedComponents(path, data, video, is_slim, outpath='local_path', discri
                 if(number%2):
                     continue
                 
-                #raw_image manipulation before subtracting
-                Filters.Denoising1(input_folder, file_raw, output_folder, 'raw_denoising1.png', denoising1)
                 #background subtraction
                 Filters.BackgroundSubtraction(output_folder, 'raw_denoising1.png', file_name4+'_bkg_dilationed.png', output_folder, 'subtracted.png')
                 #manipulation after subtracting
