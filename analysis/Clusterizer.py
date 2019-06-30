@@ -51,7 +51,7 @@ def plot_Clusterizers(c_list,color_list):
     ipywidgets.interact(graph, c_l = ipywidgets.fixed(c_list), color_l = ipywidgets.fixed(color_list),
                         key_x = Particle.keys, key_y = Particle.keys)
     
-def alpha_selector(v,thrs=[2,50,15,10,1.5]):
+def alpha_selector(v,thrs):
     if v[0] < thrs[0]:  # persistence
         return False
     if v[1] > thrs[1]:  # lenght
@@ -64,15 +64,18 @@ def alpha_selector(v,thrs=[2,50,15,10,1.5]):
         return False
     return True
     
-def sub_Clusterizer(clusterizer_in,newname,func=alpha_selector):
+def sub_Clusterizer(clusterizer_in,newname,func=alpha_selector,thrs=[2,600,12,6,2.5]):
     particles = []
+    labels = []
     for i,v in enumerate(clusterizer_in.values):
-        if func(v):
+        if func(v,thrs):
             particles.append(clusterizer_in.slim_particles[i])
-    c = Clusterizer(newname,particles,False)
+            labels.append(clusterizer_in.labels[i])
+    c = Clusterizer(newname,particles,True)
+    c.labels = np.array(labels)
     return c
 
-def classify(c,func=alpha_selector,thrs=[2,50,15,10,1.5],verbose=True):
+def classify(c,func=alpha_selector,thrs=[2,400,17,4,1.8],verbose=True):
     labels = np.copy(c.labels)
     false_positives = 0
     false_negatives = 0
