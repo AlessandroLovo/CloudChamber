@@ -333,8 +333,15 @@ class Trace():
             
                 
         n = min(self.n_components,int(perimeter**2/(16*area)))
+        if self.n_components == 0:
+            print(self.filename+': invalid particle')
+            return -1.0 # invalid particle
         
         self.lenght, self.thickness = lt(perimeter,area,n)
+        if not self.thickness > 0:
+            print(self.filename+': invalid particle')
+            return -1.0 # invalid particle
+        
         self.lenght += self.extra_lenght
         
         self.curvature = max(self.lenght/self.linear_lenght,1.)
