@@ -53,6 +53,7 @@ class Trace():
         self.components_centroids = []
         self.components_extremals = []
         self.components_joints = []
+        self.extremals = []
         
         self.extra_lenght = 0.
         self.linear_lenght = 0.
@@ -112,6 +113,7 @@ class Trace():
         plt.scatter(self.components_extremals[:,:,0].flatten(),self.components_extremals[:,:,1].flatten(),marker='o',color='orange',s=50)
         for c in self.components_joints:
             plt.plot(c[1][:,0],c[1][:,1],color='orange',linewidth = 2)
+        plt.plot(self.extremals[:,0],self.extremals[:,1],color='black',alpha=0.8,linewidth=2)
         plt.figtext(0.1,0.03,'lenght = %.1f, thickness = %.2f, n_components = %d, curvature = %.3f' % (self.lenght,self.thickness,self.n_components,self.curvature))
         #plt.contour(self.density_matrix.T,levels=[0.25,0.5,0.75,1])
         if figname == '':
@@ -306,6 +308,7 @@ class Trace():
                                 best_p1 = p1
                             if (p1[0] - p[0])**2 + (p1[1] - p[1])**2 > d1:
                                 d1 = (p1[0] - p[0])**2 + (p1[1] - p[1])**2
+                                self.extremals = [p,p1]
                     if verbose:
                         print((i,i1,d))
                     values.append((np.sqrt(d+np.random.uniform(0,1)),np.array([[best_p[0],best_p[1]],[best_p1[0],best_p1[1]]])))
@@ -321,6 +324,7 @@ class Trace():
         else:
             c = self.components_extremals[0]
             self.linear_lenght = np.sqrt((c[0][0] - c[1][0])**2 + (c[0][1] - c[1][1])**2)
+            self.extremals = c
         
         # compute centroids
         for i,c in enumerate(self.components):
@@ -330,7 +334,7 @@ class Trace():
             self.components_centroids.append([xm,ym])
         
         self.components_centroids = np.array(self.components_centroids)
-            
+        self.extremals = np.array(self.extremals)
                 
         n = min(self.n_components,int(perimeter**2/(16*area)))
         if self.n_components == 0:
